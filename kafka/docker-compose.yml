@@ -1,0 +1,28 @@
+version: "3.8"
+services:
+  kafka:
+    image: apache/kafka:3.8.0
+    container_name: local-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      # 단일 노드 환경이므로 노드 ID 1 사용
+      KAFKA_NODE_ID: 1
+      # broker와 controller 역할 모두 수행
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      # 클라이언트 접속용 리스너(9092)와 컨트롤러용 리스너(9093)
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093"
+      # 외부 접속 시 사용할 주소 (로컬 개발환경)
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9092"
+      # 컨트롤러 통신에 사용할 리스너 이름
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      # KRaft 모드 컨트롤러 쿼럼 구성 (단일 노드)
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@local-kafka:9093"
+      # 데이터 저장 경로
+      KAFKA_LOG_DIRS: "/var/lib/kafka/data"
+    volumes:
+      - ./data:/var/lib/kafka/data
+    command: >
+      bash -c "if [ ! -f /var/lib/kafka/data/meta.properties ]; then
+               /opt/kafka/bin/kafka-storage.sh format -t $(cat /proc/sys/kernel/random/uuid) -c /opt/kafka/config/kraft/server.properties && echo 'Storage formatted';
+             fi && /opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/kraft/server.properties"
